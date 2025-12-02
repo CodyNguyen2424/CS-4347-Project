@@ -93,9 +93,9 @@ def handle_find_loans(conn):
 
 def handle_checkin(conn):
     print("Search for open loans to check in:")
-    isbn = prompt("ISBN (or blank): ")
-    card = prompt("Card ID (or blank): ")
-    name = prompt("Borrower name (or blank): ")
+    isbn = prompt("ISBN (or leave blank): ")
+    card = prompt("Card ID (or leave blank): ")
+    name = prompt("Borrower name (or leave blank): ")
 
     kwargs = {}
     if isbn.strip():
