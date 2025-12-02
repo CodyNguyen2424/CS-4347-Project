@@ -1,13 +1,16 @@
 # Library Database (Milestone 2)
 
-This repository contains the tooling for Milestone 2 of the CS 4347 database project. It assumes the four normalized CSV files created by `normalize.py` are available in the project root:
+This repository contains the python files to query the SQLite database for Milestone 2 of the CS 4347 database project. These folowing csv files are given by the professor as needed for the database project:
 
 - `book.csv`
 - `authors.csv`
 - `book_authors.csv`
 - `borrower.csv`
 
-Run the normalization script if these files ever need to be regenerated:
+Run the normalization script to create the following normalized csv files:
+
+- `normalized_books.csv`
+- `normalized_borrowers.csv`
 
 ```bash
 python3 normalize.py
