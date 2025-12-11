@@ -1,7 +1,7 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import db_transaction
 
-def create_user(conn, username: str, password: str, card_id: int = None) -> int:
+def create_user(conn, username: str, password: str, card_id: int = None, is_admin: bool = False) -> int:
     """Create a new user with hashed password."""
     username = (username or "").strip()
     password = (password or "").strip()
@@ -20,8 +20,8 @@ def create_user(conn, username: str, password: str, card_id: int = None) -> int:
             raise ValueError("Username already exists")
         
         cursor = conn.execute(
-            "INSERT INTO USERS (Username, Password, Card_id) VALUES (?, ?, ?)",
-            (username, password_hash, card_id)
+            "INSERT INTO USERS (Username, Password, Card_id, Is_admin) VALUES (?, ?, ?, ?)",
+            (username, password_hash, card_id, 1 if is_admin else 0)
         )
         return cursor.lastrowid
 
@@ -47,7 +47,7 @@ def get_user_info(conn, username: str) -> dict:
     """Get user information including borrower details."""
     row = conn.execute(
         """
-        SELECT u.User_id, u.Username, u.Card_id, b.Bname, b.Ssn, b.Address, b.Phone
+        SELECT u.User_id, u.Username, u.Card_id, u.Is_admin, b.Bname, b.Ssn, b.Address, b.Phone
         FROM USERS u
         LEFT JOIN BORROWER b ON u.Card_id = b.Card_id
         WHERE u.Username = ?
@@ -56,6 +56,15 @@ def get_user_info(conn, username: str) -> dict:
     ).fetchone()
     
     return dict(row) if row else None
+
+def is_admin(conn, username: str) -> bool:
+    """Check if a user is an admin."""
+    row = conn.execute(
+        "SELECT Is_admin FROM USERS WHERE Username = ?",
+        (username,)
+    ).fetchone()
+    
+    return bool(row and row['Is_admin']) if row else False
 
 def initialize_default_user(conn):
     """Create default admin user if no users exist. Creates USERS table if needed."""
@@ -67,6 +76,7 @@ def initialize_default_user(conn):
                 Username  VARCHAR(50) NOT NULL UNIQUE,
                 Password  VARCHAR(255) NOT NULL,
                 Card_id   INTEGER,
+                Is_admin  INTEGER NOT NULL DEFAULT 0 CHECK (Is_admin IN (0, 1)),
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (Card_id) REFERENCES BORROWER(Card_id)
             )
@@ -75,7 +85,7 @@ def initialize_default_user(conn):
         
         count = conn.execute("SELECT COUNT(*) FROM USERS").fetchone()[0]
         if count == 0:
-            create_user(conn, 'admin', 'admin', card_id=None)
+            create_user(conn, 'admin', 'admin', card_id=None, is_admin=True)
             print("Created default admin user (username: admin, password: admin)")
     except Exception as e:
         print(f"Could not initialize users: {e}")

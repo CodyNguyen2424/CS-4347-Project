@@ -4,17 +4,39 @@
 <div class="card" style="text-align: center; max-width: 900px; margin: 2rem auto;">
     <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">Welcome to Books4U</h1>
     <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 3rem;">
-        Manage books, borrowers, loans, and fines efficiently
+        {% if session.get('is_admin') %}
+        Library Management System
+        {% else %}
+        Your Personal Library Portal
+        {% endif %}
     </p>
 
     <div class="grid" style="text-align: left;">
+        <!-- Search Books - Available to everyone -->
         <a href="{{ url_for('search_books') }}" class="card"
             style="margin:0; transition: all 0.2s; text-decoration: none;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
             <h2 style="margin-bottom: 0.5rem;">Search Books</h2>
-            <p style="color: var(--text-secondary); margin: 0;">Browse the catalog and check book availability</p>
+            <p style="color: var(--text-secondary); margin: 0;">
+                {% if session.get('is_admin') %}
+                Browse the catalog and manage checkouts
+                {% else %}
+                Browse and checkout books from our catalog
+                {% endif %}
+            </p>
         </a>
 
+        <!-- My Profile - For regular users -->
+        {% if not session.get('is_admin') %}
+        <a href="{{ url_for('profile') }}" class="card" style="margin:0; transition: all 0.2s; text-decoration: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
+            <h2 style="margin-bottom: 0.5rem;">My Profile</h2>
+            <p style="color: var(--text-secondary); margin: 0;">View your loans, fines, and account details</p>
+        </a>
+        {% endif %}
+
+        <!-- Admin-only features -->
+        {% if session.get('is_admin') %}
         <a href="{{ url_for('view_loans') }}" class="card"
             style="margin:0; transition: all 0.2s; text-decoration: none;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
@@ -26,7 +48,7 @@
             style="margin:0; transition: all 0.2s; text-decoration: none;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
             <h2 style="margin-bottom: 0.5rem;">Borrowers</h2>
-            <p style="color: var(--text-secondary); margin: 0;">Register new library members</p>
+            <p style="color: var(--text-secondary); margin: 0;">Register and manage library members</p>
         </a>
 
         <a href="{{ url_for('manage_fines') }}" class="card"
@@ -35,11 +57,13 @@
             <h2 style="margin-bottom: 0.5rem;">Fines</h2>
             <p style="color: var(--text-secondary); margin: 0;">Track and process outstanding fines</p>
         </a>
+        {% endif %}
     </div>
 </div>
 
 <div class="card" style="max-width: 900px; margin: 0 auto;">
-    <h3 style="margin-bottom: 1rem;">Quick Stats</h3>
+    {% if session.get('is_admin') %}
+    <h3 style="margin-bottom: 1rem;">Library Statistics</h3>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; text-align: center;">
         <div>
             <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">25,001</div>
@@ -54,5 +78,23 @@
             <div style="color: var(--text-secondary);">Registered Borrowers</div>
         </div>
     </div>
+    {% else %}
+    <h3 style="margin-bottom: 1rem;">Getting Started</h3>
+    <div style="color: var(--text-secondary); line-height: 1.8;">
+        <p><strong style="color: var(--text-primary);">📚 Browse Books:</strong> Search our catalog of 25,001 books by
+            title, author, or ISBN</p>
+        <p><strong style="color: var(--text-primary);">✅ Easy Checkout:</strong> Select books and checkout with one
+            click - no need to enter your card number</p>
+        <p><strong style="color: var(--text-primary);">📖 Manage Loans:</strong> View your active loans and return books
+            from your profile</p>
+        <p><strong style="color: var(--text-primary);">💰 Track Fines:</strong> See any outstanding fines on your
+            profile page</p>
+        <p
+            style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: var(--radius);">
+            <strong style="color: var(--accent);">📌 Tip:</strong> You can checkout up to 3 books at a time. Books are
+            due 14 days after checkout.
+        </p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
