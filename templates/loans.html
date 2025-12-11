@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+    <!-- Check Out Section -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Check Out Book</h2>
+        </div>
+        <form action="{{ url_for('checkout_book') }}" method="POST">
+            <div class="form-group">
+                <label class="form-label">ISBN</label>
+                <input type="text" name="isbn" class="form-control" placeholder="Enter ISBN" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Borrower Card ID</label>
+                <input type="number" name="card_id" class="form-control" placeholder="Enter Card ID" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Check Out Title</button>
+        </form>
+    </div>
+
+    <!-- Check In Section -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Check In / Find Loans</h2>
+        </div>
+        <form action="{{ url_for('view_loans') }}" method="GET" class="form-group">
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <select name="type" class="form-control" style="width: auto;">
+                    <option value="borrower_name" {{ 'selected' if search_type=='borrower_name' }}>Borrower Name
+                    </option>
+                    <option value="card_id" {{ 'selected' if search_type=='card_id' }}>Card ID</option>
+                    <option value="isbn" {{ 'selected' if search_type=='isbn' }}>ISBN</option>
+                </select>
+                <input type="text" name="q" class="form-control" placeholder="Search term..." value="{{ search_term }}">
+                <button type="submit" class="btn btn-primary">Find</button>
+            </div>
+        </form>
+
+        {% if loans %}
+        <form action="{{ url_for('view_loans') }}" method="POST">
+            <input type="hidden" name="action" value="checkin">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="40">Select</th>
+                            <th>ID</th>
+                            <th>Book</th>
+                            <th>Borrower</th>
+                            <th>Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in loans %}
+                        <tr>
+                            <td><input type="checkbox" name="loan_id" value="{{ loan.Loan_id }}"></td>
+                            <td>{{ loan.Loan_id }}</td>
+                            <td>
+                                <div><b style="color:var(--text-primary)">{{ loan.Title }}</b></div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary)">{{ loan.Isbn }}</div>
+                            </td>
+                            <td>
+                                <div><b style="color:var(--text-primary)">{{ loan.Bname }}</b></div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary)">Card: {{ loan.Card_id }}
+                                </div>
+                            </td>
+                            <td>{{ loan.Due_date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary btn-block">Check In Selected</button>
+            </div>
+        </form>
+        {% elif search_term %}
+        <div class="alert alert-error">No active loans found.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
