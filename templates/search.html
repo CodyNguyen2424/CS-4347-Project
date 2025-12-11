@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📚 Book Catalog</h2>
+    </div>
+
+    <form action="{{ url_for('search_books') }}" method="GET" class="form-group">
+        <div style="display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; margin-bottom: 1rem;">
+            <input type="text" name="q" class="form-control" placeholder="Search by Title, Author, or ISBN..."
+                value="{{ query }}">
+
+            <select name="status" class="form-control" style="width: 200px;">
+                <option value="all" {{ 'selected' if status_filter=='all' }}>All Books</option>
+                <option value="available" {{ 'selected' if status_filter=='available' }}>Available Only</option>
+                <option value="checked_out" {{ 'selected' if status_filter=='checked_out' }}>Checked Out Only</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary">Search</button>
+
+            {% if query or status_filter != 'all' %}
+            <a href="{{ url_for('search_books') }}" class="btn btn-danger">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if results %}
+    <div
+        style="margin-bottom: 1rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            {% if query %}
+            Found {{ total_count }} book(s) matching "{{ query }}"
+            {% else %}
+            Showing {{ total_count }} total books
+            {% endif %}
+            {% if status_filter == 'available' %}
+            (Available only)
+            {% elif status_filter == 'checked_out' %}
+            (Checked out only)
+            {% endif %}
+        </div>
+        <div>
+            Page {{ page }} of {{ total_pages }}
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ISBN</th>
+                    <th>Title</th>
+                    <th>Authors</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in results %}
+                <tr>
+                    <td><code style="color: var(--text-secondary); font-size: 0.85rem;">{{ book.Isbn }}</code></td>
+                    <td><strong>{{ book.Title }}</strong></td>
+                    <td style="color: var(--text-secondary);">{{ book.Authors or 'Unknown' }}</td>
+                    <td>
+                        <span class="badge {{ 'badge-out' if book.Status == 'OUT' else 'badge-in' }}">
+                            {{ book.Status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if book.Status == 'IN' %}
+                        <button type="button" class="btn btn-success" style="padding: 0.5rem 1rem; font-size: 0.875rem;"
+                            onclick="promptCheckout('{{ book.Isbn }}')">
+                            Checkout
+                        </button>
+                        {% else %}
+                        <span style="color: var(--text-secondary); font-size: 0.875rem;">Checked Out</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if total_pages > 1 %}
+    <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 2rem;">
+        {% if page > 1 %}
+        <a href="{{ url_for('search_books', q=query, status=status_filter, page=1) }}" class="btn btn-primary">First</a>
+        <a href="{{ url_for('search_books', q=query, status=status_filter, page=page-1) }}"
+            class="btn btn-primary">Previous</a>
+        {% endif %}
+
+        {% for p in range([1, page-2]|max, [total_pages, page+2]|min + 1) %}
+        {% if p == page %}
+        <span class="btn btn-primary" style="background: var(--accent-hover); cursor: default;">{{ p }}</span>
+        {% else %}
+        <a href="{{ url_for('search_books', q=query, status=status_filter, page=p) }}" class="btn btn-primary"
+            style="background: rgba(255, 107, 53, 0.3);">{{ p }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %} <a href="{{ url_for('search_books', q=query, status=status_filter, page=page+1) }}"
+            class="btn btn-primary">Next</a>
+            <a href="{{ url_for('search_books', q=query, status=status_filter, page=total_pages) }}"
+                class="btn btn-primary">Last</a>
+            {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-error">No books found{% if query %} matching "{{ query }}"{% endif %}.</div>
+    {% endif %}
+</div>
+
+<script>
+    function promptCheckout(isbn) {
+        const cardId = prompt("Enter Borrower Card ID to checkout:");
+        if (cardId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('checkout_book') }}";
+
+            const isbnInput = document.createElement('input');
+            isbnInput.type = 'hidden';
+            isbnInput.name = 'isbn';
+            isbnInput.value = isbn;
+
+            const cardInput = document.createElement('input');
+            cardInput.type = 'hidden';
+            cardInput.name = 'card_id';
+            cardInput.value = cardId;
+
+            form.appendChild(isbnInput);
+            form.appendChild(cardInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

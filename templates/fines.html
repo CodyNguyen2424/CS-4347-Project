@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Outstanding Fines</h2>
+        <form action="{{ url_for('manage_fines') }}" method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="refresh">
+            <button type="submit" class="btn btn-primary">Refresh Fines</button>
+        </form>
+    </div>
+
+    {% if fines %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Card ID</th>
+                    <th>Borrower Name</th>
+                    <th>Total Fine Amount</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fine in fines %}
+                <tr>
+                    <td>{{ fine.Card_id }}</td>
+                    <td>{{ fine.Bname }}</td>
+                    <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Total_Fines) }}</td>
+                    <td>
+                        <form action="{{ url_for('manage_fines') }}" method="POST">
+                            <input type="hidden" name="action" value="pay">
+                            <input type="hidden" name="card_id" value="{{ fine.Card_id }}">
+                            <button type="submit" class="btn btn-primary">Pay Full Amount</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-success">No outstanding fines found.</div>
+    {% endif %}
+</div>
+{% endblock %}

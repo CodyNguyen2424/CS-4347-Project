@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="text-align: center; max-width: 900px; margin: 2rem auto;">
+    <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">Library Management System</h1>
+    <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 3rem;">
+        Manage books, borrowers, loans, and fines efficiently
+    </p>
+
+    <div class="grid" style="text-align: left;">
+        <a href="{{ url_for('search_books') }}" class="card"
+            style="margin:0; transition: all 0.2s; text-decoration: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
+            <h2 style="margin-bottom: 0.5rem;">Search Books</h2>
+            <p style="color: var(--text-secondary); margin: 0;">Browse the catalog and check book availability</p>
+        </a>
+
+        <a href="{{ url_for('view_loans') }}" class="card"
+            style="margin:0; transition: all 0.2s; text-decoration: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+            <h2 style="margin-bottom: 0.5rem;">Manage Loans</h2>
+            <p style="color: var(--text-secondary); margin: 0;">Check in and check out books for borrowers</p>
+        </a>
+
+        <a href="{{ url_for('manage_borrowers') }}" class="card"
+            style="margin:0; transition: all 0.2s; text-decoration: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+            <h2 style="margin-bottom: 0.5rem;">Borrowers</h2>
+            <p style="color: var(--text-secondary); margin: 0;">Register new library members</p>
+        </a>
+
+        <a href="{{ url_for('manage_fines') }}" class="card"
+            style="margin:0; transition: all 0.2s; text-decoration: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">💰</div>
+            <h2 style="margin-bottom: 0.5rem;">Fines</h2>
+            <p style="color: var(--text-secondary); margin: 0;">Track and process outstanding fines</p>
+        </a>
+    </div>
+</div>
+
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <h3 style="margin-bottom: 1rem;">Quick Stats</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; text-align: center;">
+        <div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">25,001</div>
+            <div style="color: var(--text-secondary);">Books in Catalog</div>
+        </div>
+        <div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">15,549</div>
+            <div style="color: var(--text-secondary);">Authors</div>
+        </div>
+        <div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">1,000</div>
+            <div style="color: var(--text-secondary);">Registered Borrowers</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

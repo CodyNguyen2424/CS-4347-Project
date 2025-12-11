@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 1000px; margin: 0 auto;">
+    <div class="card-header">
+        <h2>👤 My Profile</h2>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div>
+            <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">Account Information</h3>
+            <div style="color: var(--text-secondary);">
+                <p><strong style="color: var(--text-primary);">Username:</strong> {{ user.Username }}</p>
+                {% if user.Card_id %}
+                <p><strong style="color: var(--text-primary);">Borrower Card ID:</strong> {{ user.Card_id }}</p>
+                <p><strong style="color: var(--text-primary);">Name:</strong> {{ user.Bname }}</p>
+                <p><strong style="color: var(--text-primary);">Address:</strong> {{ user.Address }}</p>
+                {% if user.Phone %}
+                <p><strong style="color: var(--text-primary);">Phone:</strong> {{ user.Phone }}</p>
+                {% endif %}
+                {% else %}
+                <p style="color: var(--warning);">No borrower account linked</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">Quick Stats</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div
+                    style="text-align: center; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: var(--radius);">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">{{ loans|length }}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem;">Active Loans</div>
+                </div>
+                <div
+                    style="text-align: center; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius);">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--danger);">${{
+                        "%.2f"|format(total_fines) }}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem;">Outstanding Fines</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.Card_id %}
+    <!-- Active Loans -->
+    <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">📚 My Active Loans</h3>
+        {% if loans %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ISBN</th>
+                        <th>Title</th>
+                        <th>Checked Out</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td><code style="color: var(--text-secondary); font-size: 0.85rem;">{{ loan.Isbn }}</code></td>
+                        <td><strong>{{ loan.Title }}</strong></td>
+                        <td>{{ loan.Date_out }}</td>
+                        <td>{{ loan.Due_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary);">No active loans</p>
+        {% endif %}
+    </div>
+
+    <!-- Outstanding Fines -->
+    <div>
+        <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">💰 Outstanding Fines</h3>
+        {% if fines %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Due Date</th>
+                        <th>Fine Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fine in fines %}
+                    <tr>
+                        <td>
+                            <div><strong>{{ fine.Title }}</strong></div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ fine.Isbn }}</div>
+                        </td>
+                        <td>{{ fine.Due_date }}</td>
+                        <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Fine_amt) }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: rgba(239, 68, 68, 0.1);">
+                        <td colspan="2" style="text-align: right;"><strong>Total:</strong></td>
+                        <td style="color: var(--danger); font-weight: bold; font-size: 1.125rem;">${{
+                            "%.2f"|format(total_fines) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary);">No outstanding fines</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="alert alert-error">
+        <strong>No Borrower Account Linked</strong><br>
+        Contact a librarian to link your user account with a borrower card.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
