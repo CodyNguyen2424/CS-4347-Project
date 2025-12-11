@@ -375,13 +375,19 @@ def search_books():
             SELECT
                 b.Isbn,
                 b.Title,
-                COALESCE(GROUP_CONCAT(a.Name, ', '), '') AS Authors,
+                COALESCE(GROUP_CONCAT(DISTINCT a.Name, ', '), '') AS Authors,
                 CASE
                     WHEN EXISTS (
                         SELECT 1 FROM BOOK_LOANS bl WHERE bl.Isbn = b.Isbn AND bl.Date_in IS NULL
                     ) THEN 'OUT'
                     ELSE 'IN'
-                END AS Status
+                END AS Status,
+                (
+                    SELECT bl.Card_id 
+                    FROM BOOK_LOANS bl 
+                    WHERE bl.Isbn = b.Isbn AND bl.Date_in IS NULL 
+                    LIMIT 1
+                ) AS Borrower_id
             FROM BOOK b
             LEFT JOIN BOOK_AUTHORS ba ON b.Isbn = ba.Isbn
             LEFT JOIN AUTHORS a ON ba.Author_id = a.Author_id
@@ -599,12 +605,53 @@ def manage_fines():
                 flash(str(e), "error")
         return redirect(url_for('manage_fines'))
 
-    # List outstanding fines
+    # Get search query
+    query = request.args.get('q', '').strip()
+    
+    # List outstanding fines with optional search filter
     outstanding = []
     with get_connection() as conn:
-        outstanding = fines.list_outstanding_fines(conn)
+        if query:
+            # Search by Card ID or borrower name
+            cursor = conn.cursor()
+            
+            # Try to parse as Card ID (integer)
+            try:
+                card_id = int(query)
+                # Search by exact Card ID
+                cursor.execute("""
+                    SELECT
+                        bor.Card_id,
+                        bor.Bname,
+                        SUM(f.Fine_amt) AS Total_Fines
+                    FROM FINES f
+                    JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                    JOIN BORROWER bor  ON bl.Card_id = bor.Card_id
+                    WHERE f.Paid = 0 AND bor.Card_id = ?
+                    GROUP BY bor.Card_id, bor.Bname
+                    ORDER BY bor.Bname
+                """, (card_id,))
+            except ValueError:
+                # Search by borrower name substring (case-insensitive)
+                cursor.execute("""
+                    SELECT
+                        bor.Card_id,
+                        bor.Bname,
+                        SUM(f.Fine_amt) AS Total_Fines
+                    FROM FINES f
+                    JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                    JOIN BORROWER bor  ON bl.Card_id = bor.Card_id
+                    WHERE f.Paid = 0 AND LOWER(bor.Bname) LIKE ?
+                    GROUP BY bor.Card_id, bor.Bname
+                    ORDER BY bor.Bname
+                """, (f"%{query.lower()}%",))
+            
+            outstanding = [dict(row) for row in cursor.fetchall()]
+        else:
+            # No search query - show all outstanding fines
+            outstanding = fines.list_outstanding_fines(conn)
     
-    return render_template('fines.html', fines=outstanding)
+    return render_template('fines.html', fines=outstanding, query=query)
 
 if __name__ == '__main__':
     app.run(debug=True)

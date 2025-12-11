@@ -75,6 +75,7 @@
                     <th>Title</th>
                     <th>Authors</th>
                     <th>Status</th>
+                    <th>Borrower ID</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -94,6 +95,13 @@
                         <span class="badge {{ 'badge-out' if book.Status == 'OUT' else 'badge-in' }}">
                             {{ book.Status }}
                         </span>
+                    </td>
+                    <td>
+                        {% if book.Borrower_id %}
+                        <code style="color: var(--text-secondary); font-size: 0.85rem;">{{ book.Borrower_id }}</code>
+                        {% else %}
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">—</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if book.Status == 'IN' %}

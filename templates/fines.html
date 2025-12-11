@@ -2,13 +2,35 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Outstanding Fines</h2>
         <form action="{{ url_for('manage_fines') }}" method="POST" style="display:inline;">
             <input type="hidden" name="action" value="refresh">
             <button type="submit" class="btn btn-primary">Refresh Fines</button>
         </form>
     </div>
+
+    <!-- Search Form -->
+    <form action="{{ url_for('manage_fines') }}" method="GET" class="form-group">
+        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; margin-bottom: 1rem;">
+            <input type="text" name="q" class="form-control" placeholder="Search by Card ID or Borrower Name..."
+                value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+            {% if query %}
+            <a href="{{ url_for('manage_fines') }}" class="btn btn-danger">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if query %}
+    <div style="margin-bottom: 1rem; color: var(--text-secondary);">
+        {% if fines %}
+        Found {{ fines|length }} borrower(s) matching "{{ query }}"
+        {% else %}
+        No borrowers found matching "{{ query }}"
+        {% endif %}
+    </div>
+    {% endif %}
 
     {% if fines %}
     <div class="table-responsive">
@@ -40,7 +62,7 @@
         </table>
     </div>
     {% else %}
-    <div class="alert alert-success">No outstanding fines found.</div>
+    <div class="alert alert-success">No outstanding fines found{% if query %} matching "{{ query }}"{% endif %}.</div>
     {% endif %}
 </div>
 {% endblock %}
