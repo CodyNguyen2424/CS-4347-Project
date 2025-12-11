@@ -44,18 +44,26 @@ A modern, full-featured library management system built with Flask, featuring us
 
 ### Prerequisites
 - Python 3.8 or higher
-- Windows (PowerShell)
+- Windows (PowerShell) OR macOS/Linux (Bash)
 
 ### Installation
 
 1. **Clone or download the project**
-   ```powershell
+   ```bash
    cd path/to/CS-4347-Project
    ```
 
 2. **Run the setup script**
+   
+   **Windows:**
    ```powershell
    .\setup.ps1
+   ```
+   
+   **macOS / Linux:**
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
    ```
    
    The setup script will:
@@ -74,6 +82,7 @@ A modern, full-featured library management system built with Flask, featuring us
 
 If you prefer manual setup:
 
+**Windows:**
 ```powershell
 # Install dependencies
 py -m pip install -r requirements.txt
@@ -83,6 +92,18 @@ py load_data.py
 
 # Start the application
 py app.py
+```
+
+**macOS / Linux:**
+```bash
+# Install dependencies
+python3 -m pip install -r requirements.txt
+
+# Initialize database
+python3 load_data.py
+
+# Start the application
+python3 app.py
 ```
 
 ## 📁 Project Structure
