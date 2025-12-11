@@ -10,9 +10,21 @@ Write-Host ""
 
 # Check if Python is installed
 Write-Host "Checking Python installation..." -ForegroundColor Yellow
+
+$pythonCommand = "python3"
+if (Get-Command "py" -ErrorAction SilentlyContinue) {
+    $pythonCommand = "py"
+} elseif (Get-Command "python" -ErrorAction SilentlyContinue) {
+    $pythonCommand = "python"
+}
+
 try {
-    $pythonVersion = py --version 2>&1
-    Write-Host "✓ Python found: $pythonVersion" -ForegroundColor Green
+    # Verify the command works and get version
+    $versionOutput = & $pythonCommand --version 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python command failed"
+    }
+    Write-Host "✓ Python found: $versionOutput" -ForegroundColor Green
 } catch {
     Write-Host "✗ Python not found!" -ForegroundColor Red
     Write-Host "Please install Python 3.8 or higher from https://www.python.org/" -ForegroundColor Red
@@ -25,8 +37,8 @@ Write-Host "Installing required packages..." -ForegroundColor Yellow
 Write-Host "  - Flask (web framework)" -ForegroundColor Gray
 Write-Host "  - Werkzeug (password hashing)" -ForegroundColor Gray
 
-py -m pip install --upgrade pip --quiet
-py -m pip install Flask Werkzeug --quiet
+& $pythonCommand -m pip install --upgrade pip --quiet
+& $pythonCommand -m pip install Flask Werkzeug --quiet
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✓ Packages installed successfully" -ForegroundColor Green
@@ -43,7 +55,7 @@ if (Test-Path "library.db") {
     
     if ($response -eq 'y' -or $response -eq 'Y') {
         Write-Host "Reloading database..." -ForegroundColor Yellow
-        py load_data.py
+        & $pythonCommand load_data.py
         if ($LASTEXITCODE -eq 0) {
             Write-Host "✓ Database reloaded successfully" -ForegroundColor Green
         } else {
@@ -55,7 +67,7 @@ if (Test-Path "library.db") {
     }
 } else {
     Write-Host "Creating database..." -ForegroundColor Yellow
-    py load_data.py
+    & $pythonCommand load_data.py
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ Database created successfully" -ForegroundColor Green
     } else {
@@ -71,7 +83,7 @@ Write-Host "  Setup Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "To start the application, run:" -ForegroundColor Yellow
-Write-Host "  py app.py" -ForegroundColor White
+Write-Host "  $pythonCommand app.py" -ForegroundColor White
 Write-Host ""
 Write-Host "Then open your browser to:" -ForegroundColor Yellow
 Write-Host "  http://127.0.0.1:5000" -ForegroundColor White
@@ -85,4 +97,4 @@ Read-Host
 
 # Start the application
 Write-Host "Starting Books4U..." -ForegroundColor Cyan
-py app.py
+& $pythonCommand app.py
