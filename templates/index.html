@@ -3,9 +3,17 @@
 {% block content %}
 <div class="card" style="text-align: center; max-width: 900px; margin: 2rem auto;">
     <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">Welcome to Books4U</h1>
-    <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 3rem;">
+    <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 1rem;">
         Manage books, borrowers, loans, and fines efficiently
     </p>
+    {% if is_superuser %}
+    <div style="background: rgba(255, 107, 53, 0.1); padding: 0.75rem; border-radius: var(--radius); margin-bottom: 2rem; display: inline-block;">
+        <span style="color: var(--accent); font-weight: bold;">⚡ Super User Mode Active</span>
+        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+            You can override checkout restrictions
+        </div>
+    </div>
+    {% endif %}
 
     <div class="grid" style="text-align: left;">
         <a href="{{ url_for('search_books') }}" class="card"

@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="text-align: center; max-width: 900px; margin: 2rem auto;">
+    <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">Welcome, {{ user.Bname or user.Username }}!</h1>
+    <p style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 3rem;">
+        Your Library Account Dashboard
+    </p>
+</div>
+
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <div class="card">
+        <div class="card-header">
+            <h2>📚 My Active Loans</h2>
+        </div>
+        {% if loans %}
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Checked Out</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>
+                            <div><strong>{{ loan.Title }}</strong></div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ loan.Isbn }}</div>
+                        </td>
+                        <td>{{ loan.Date_out }}</td>
+                        <td>{{ loan.Due_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No active loans</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>💰 Outstanding Fines</h2>
+        </div>
+        {% if fines %}
+        <div style="padding: 1rem;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--danger); margin-bottom: 1rem;">
+                ${{ "%.2f"|format(total_fines) }}
+            </div>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Book</th>
+                            <th>Fine</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fine in fines %}
+                        <tr>
+                            <td>
+                                <div><strong>{{ fine.Title }}</strong></div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ fine.Isbn }}</div>
+                            </td>
+                            <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Fine_amt) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No outstanding fines</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <div class="card-header">
+        <h2>🔍 Search Books</h2>
+    </div>
+    <form action="{{ url_for('search_books') }}" method="GET" class="form-group">
+        <div style="display: flex; gap: 1rem;">
+            <input type="text" name="q" class="form-control" placeholder="Search by Title, Author, or ISBN..."
+                style="flex: 1;">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

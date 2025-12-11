@@ -15,17 +15,30 @@
             <a href="/" class="nav-brand">Books4U</a>
             <div class="nav-links">
                 <a href="{{ url_for('search_books') }}" class="nav-link">Search</a>
+                
+                {% if user_role and user_role != 'borrower' %}
                 <a href="{{ url_for('view_loans') }}" class="nav-link">Loans</a>
                 <a href="{{ url_for('manage_borrowers') }}" class="nav-link">Borrowers</a>
                 <a href="{{ url_for('manage_fines') }}" class="nav-link">Fines</a>
+                {% else %}
+                <a href="{{ url_for('borrower_homepage') }}" class="nav-link">My Account</a>
+                {% endif %}
 
                 <!-- User Dropdown -->
                 <div class="dropdown">
                     <button class="nav-link dropdown-toggle" onclick="toggleDropdown()">
                         👤 {{ session.username }}
+                        {% if is_superuser %}
+                        <span style="color: var(--accent); font-size: 0.75rem; margin-left: 0.25rem;">⚡</span>
+                        {% endif %}
                     </button>
                     <div class="dropdown-menu" id="userDropdown">
                         <a href="{{ url_for('profile') }}" class="dropdown-item">My Profile</a>
+                        {% if is_superuser %}
+                        <div class="dropdown-item" style="color: var(--accent); font-weight: bold; font-size: 0.875rem;">
+                            ⚡ Super User
+                        </div>
+                        {% endif %}
                         <a href="{{ url_for('logout') }}" class="dropdown-item" style="color: var(--danger);">Logout</a>
                     </div>
                 </div>

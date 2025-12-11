@@ -14,6 +14,20 @@ app.secret_key = 'library_secret_key_change_in_production'  # Change this in pro
 with get_connection() as conn:
     auth.initialize_default_user(conn)
 
+# Context processor to make user info available in all templates
+@app.context_processor
+def inject_user_info():
+    username = session.get('username')
+    user_role = None
+    is_super = False
+    if username:
+        with get_connection() as conn:
+            user_info = auth.get_user_info(conn, username)
+            if user_info:
+                user_role = user_info.get('Role')
+                is_super = auth.is_superuser(conn, username)
+    return dict(user_role=user_role, is_superuser=is_super)
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -61,8 +75,8 @@ def register():
                     # Create borrower account with user-provided SSN
                     card_id = borrowers.create_borrower(conn, ssn, full_name, address, phone)
                     
-                    # Create user account linked to borrower
-                    auth.create_user(conn, username, password, card_id=card_id)
+                    # Create user account linked to borrower (as borrower role)
+                    auth.create_user(conn, username, password, card_id=card_id, role='borrower')
                     
                     flash(f'Account created successfully! Your Borrower Card ID is: {card_id}', 'success')
                     return redirect(url_for('login'))
@@ -119,11 +133,19 @@ def profile():
             outstanding_fines = [dict(row) for row in cursor.fetchall()]
             total_fines = sum(f['Fine_amt'] for f in outstanding_fines)
     
+    # Get user role
+    user_role = user_info.get('Role') if user_info else None
+    is_super = False
+    with get_connection() as conn:
+        is_super = auth.is_superuser(conn, username)
+    
     return render_template('profile.html', 
                          user=user_info, 
                          loans=active_loans,
                          fines=outstanding_fines,
-                         total_fines=total_fines)
+                         total_fines=total_fines,
+                         user_role=user_role,
+                         is_superuser=is_super)
 
 @app.route('/profile/link-borrower', methods=['POST'])
 @login_required
@@ -177,7 +199,34 @@ def link_borrower():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    username = session.get('username')
+    with get_connection() as conn:
+        user_info = auth.get_user_info(conn, username)
+        if user_info and user_info.get('Role') == 'borrower':
+            return redirect(url_for('borrower_homepage'))
+    # Get user role for template
+    username = session.get('username')
+    user_role = None
+    is_super = False
+    with get_connection() as conn:
+        user_info = auth.get_user_info(conn, username)
+        if user_info:
+            user_role = user_info.get('Role')
+            is_super = auth.is_superuser(conn, username)
+    
+    return render_template('index.html', user_role=user_role, is_superuser=is_super)
+
+def librarian_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        username = session.get('username')
+        with get_connection() as conn:
+            user_info = auth.get_user_info(conn, username)
+            if not user_info or user_info.get('Role') not in ['librarian', 'superuser']:
+                flash('Access denied. This page is for librarians only.', 'error')
+                return redirect(url_for('borrower_homepage' if auth.is_borrower(conn, username) else 'index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/search', methods=['GET'])
 @login_required
@@ -222,18 +271,22 @@ def search_books():
         """
         total_count = cursor.execute(count_query, params).fetchone()[0]
         
-        # Get paginated results
+        # Get paginated results with Borrower ID
         results_query = f"""
             SELECT
                 b.Isbn,
                 b.Title,
-                COALESCE(GROUP_CONCAT(a.Name, ', '), '') AS Authors,
+                COALESCE(GROUP_CONCAT(DISTINCT a.Name, ', '), '') AS Authors,
                 CASE
                     WHEN EXISTS (
                         SELECT 1 FROM BOOK_LOANS bl WHERE bl.Isbn = b.Isbn AND bl.Date_in IS NULL
                     ) THEN 'OUT'
                     ELSE 'IN'
-                END AS Status
+                END AS Status,
+                (SELECT bl.Card_id 
+                 FROM BOOK_LOANS bl 
+                 WHERE bl.Isbn = b.Isbn AND bl.Date_in IS NULL 
+                 LIMIT 1) AS Borrower_ID
             FROM BOOK b
             LEFT JOIN BOOK_AUTHORS ba ON b.Isbn = ba.Isbn
             LEFT JOIN AUTHORS a ON ba.Author_id = a.Author_id
@@ -247,16 +300,29 @@ def search_books():
     
     total_pages = (total_count + per_page - 1) // per_page
     
+    # Get user role for template
+    username = session.get('username')
+    user_role = None
+    is_super = False
+    with get_connection() as conn:
+        user_info = auth.get_user_info(conn, username)
+        if user_info:
+            user_role = user_info.get('Role')
+            is_super = auth.is_superuser(conn, username)
+    
     return render_template('search.html', 
                          results=results, 
                          query=query,
                          page=page,
                          total_pages=total_pages,
                          total_count=total_count,
-                         status_filter=status_filter)
+                         status_filter=status_filter,
+                         user_role=user_role,
+                         is_superuser=is_super)
 
 @app.route('/loans', methods=['GET', 'POST'])
 @login_required
+@librarian_required
 def view_loans():
     # Helper to checkin
     if request.method == 'POST':
@@ -291,10 +357,17 @@ def view_loans():
             except ValueError:
                 pass # No filter or invalid filter
 
-    return render_template('loans.html', loans=open_loans, search_term=search_term, search_type=search_type)
+    # Get user role for template
+    username = session.get('username')
+    is_super = False
+    with get_connection() as conn:
+        is_super = auth.is_superuser(conn, username)
+    
+    return render_template('loans.html', loans=open_loans, search_term=search_term, search_type=search_type, is_superuser=is_super)
 
 @app.route('/checkout', methods=['POST'])
 @login_required
+@librarian_required
 def checkout_book():
     isbn = request.form.get('isbn')
     card_id = request.form.get('card_id')
@@ -305,15 +378,52 @@ def checkout_book():
 
     try:
         with get_connection() as conn:
-            loans.checkout(conn, isbn, card_id)
+            # Check if user is super-user
+            is_superuser = auth.is_superuser(conn, session.get('username'))
+            loans.checkout(conn, isbn, card_id, override_restrictions=is_superuser)
         flash(f"Book {isbn} checked out to Card {card_id}.", "success")
     except Exception as e:
         flash(str(e), "error")
     
     return redirect(url_for('view_loans'))
 
+@app.route('/bulk-checkout', methods=['POST'])
+@login_required
+@librarian_required
+def bulk_checkout():
+    isbns = request.form.getlist('isbns')
+    card_id = request.form.get('card_id')
+    
+    if not isbns or not card_id:
+        flash("Please select at least one book and provide a Card ID.", "error")
+        return redirect(url_for('search_books'))
+
+    try:
+        with get_connection() as conn:
+            # Check if user is super-user
+            is_superuser = auth.is_superuser(conn, session.get('username'))
+            success_count = 0
+            errors = []
+            
+            for isbn in isbns:
+                try:
+                    loans.checkout(conn, isbn, card_id, override_restrictions=is_superuser)
+                    success_count += 1
+                except Exception as e:
+                    errors.append(f"{isbn}: {str(e)}")
+            
+            if success_count > 0:
+                flash(f"Successfully checked out {success_count} book(s) to Card {card_id}.", "success")
+            if errors:
+                flash("Some checkouts failed: " + "; ".join(errors), "error")
+    except Exception as e:
+        flash(str(e), "error")
+    
+    return redirect(url_for('search_books'))
+
 @app.route('/borrowers', methods=['GET', 'POST'])
 @login_required
+@librarian_required
 def manage_borrowers():
     if request.method == 'POST':
         ssn = request.form.get('ssn')
@@ -372,6 +482,7 @@ def manage_borrowers():
 
 @app.route('/borrowers/delete/<int:card_id>', methods=['POST'])
 @login_required
+@librarian_required
 def delete_borrower(card_id):
     try:
         username = session.get('username')
@@ -424,8 +535,58 @@ def unlink_borrower():
     
     return redirect(url_for('profile'))
 
+@app.route('/borrower')
+@login_required
+def borrower_homepage():
+    """Borrower homepage - allows borrowers to view their checkouts and search books"""
+    username = session.get('username')
+    
+    with get_connection() as conn:
+        # Verify user is a borrower
+        if not auth.is_borrower(conn, username):
+            flash('Access denied. This page is for borrowers only.', 'error')
+            return redirect(url_for('index'))
+        
+        user_info = auth.get_user_info(conn, username)
+        active_loans = []
+        outstanding_fines = []
+        total_fines = 0
+        
+        if user_info and user_info['Card_id']:
+            card_id = user_info['Card_id']
+            
+            # Get active loans
+            try:
+                active_loans = loans.find_open_loans(conn, card_id=card_id)
+            except:
+                pass
+            
+            # Get fines
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    f.Loan_id,
+                    f.Fine_amt,
+                    bl.Isbn,
+                    b.Title,
+                    bl.Due_date
+                FROM FINES f
+                JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                JOIN BOOK b ON bl.Isbn = b.Isbn
+                WHERE bl.Card_id = ? AND f.Paid = 0
+            """, (card_id,))
+            outstanding_fines = [dict(row) for row in cursor.fetchall()]
+            total_fines = sum(f['Fine_amt'] for f in outstanding_fines)
+    
+    return render_template('borrower_homepage.html', 
+                         user=user_info, 
+                         loans=active_loans,
+                         fines=outstanding_fines,
+                         total_fines=total_fines)
+
 @app.route('/fines', methods=['GET', 'POST'])
 @login_required
+@librarian_required
 def manage_fines():
     # Handle fine payment or refresh
     if request.method == 'POST':
@@ -445,11 +606,34 @@ def manage_fines():
         return redirect(url_for('manage_fines'))
 
     # List outstanding fines
+    show_paid = request.args.get('show_paid', 'false').lower() == 'true'
     outstanding = []
+    all_fines = []
+    
     with get_connection() as conn:
         outstanding = fines.list_outstanding_fines(conn)
+        
+        if show_paid:
+            # Get all fines including paid ones
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT
+                    bor.Card_id,
+                    bor.Bname,
+                    SUM(f.Fine_amt) AS Total_Fines,
+                    SUM(CASE WHEN f.Paid = 1 THEN f.Fine_amt ELSE 0 END) AS Paid_Fines,
+                    SUM(CASE WHEN f.Paid = 0 THEN f.Fine_amt ELSE 0 END) AS Unpaid_Fines
+                FROM FINES f
+                JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                JOIN BORROWER bor ON bl.Card_id = bor.Card_id
+                GROUP BY bor.Card_id, bor.Bname
+                ORDER BY bor.Bname
+            """)
+            all_fines = [dict(row) for row in cursor.fetchall()]
     
-    return render_template('fines.html', fines=outstanding)
+    return render_template('fines.html', 
+                         fines=outstanding if not show_paid else all_fines,
+                         show_paid=show_paid)
 
 if __name__ == '__main__':
     app.run(debug=True)

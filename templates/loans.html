@@ -6,6 +6,12 @@
     <div class="card">
         <div class="card-header">
             <h2>Check Out Book</h2>
+            {% if is_superuser %}
+            <div style="background: rgba(255, 107, 53, 0.1); padding: 0.5rem; border-radius: var(--radius); margin-top: 0.5rem; font-size: 0.875rem;">
+                <span style="color: var(--accent); font-weight: bold;">⚡ Super User:</span>
+                <span style="color: var(--text-secondary);">Can override loan limits and fine restrictions</span>
+            </div>
+            {% endif %}
         </div>
         <form action="{{ url_for('checkout_book') }}" method="POST">
             <div class="form-group">

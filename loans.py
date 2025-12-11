@@ -20,7 +20,7 @@ JOIN BORROWER bor ON bl.Card_id = bor.Card_id
 """
 
 
-def checkout(conn, isbn: str, card_id: int) -> int:
+def checkout(conn, isbn: str, card_id: int, override_restrictions: bool = False) -> int:
     isbn = (isbn or "").strip()
     card_id = int(card_id)
     if not isbn:
@@ -38,24 +38,25 @@ def checkout(conn, isbn: str, card_id: int) -> int:
         if not cursor.execute("SELECT 1 FROM BORROWER WHERE Card_id = ?", (card_id,)).fetchone():
             raise ValueError("Borrower not found")
 
-        active_loans = cursor.execute(
-            "SELECT COUNT(*) FROM BOOK_LOANS WHERE Card_id = ? AND Date_in IS NULL",
-            (card_id,),
-        ).fetchone()[0]
-        if active_loans >= MAX_ACTIVE_LOANS:
-            raise ValueError("Borrower already has 3 books checked out")
+        if not override_restrictions:
+            active_loans = cursor.execute(
+                "SELECT COUNT(*) FROM BOOK_LOANS WHERE Card_id = ? AND Date_in IS NULL",
+                (card_id,),
+            ).fetchone()[0]
+            if active_loans >= MAX_ACTIVE_LOANS:
+                raise ValueError("Borrower already has 3 books checked out")
 
-        unpaid_fines = cursor.execute(
-            """
-            SELECT COUNT(*)
-            FROM FINES f
-            JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
-            WHERE bl.Card_id = ? AND f.Paid = 0
-            """,
-            (card_id,),
-        ).fetchone()[0]
-        if unpaid_fines:
-            raise ValueError("Borrower has unpaid fines")
+            unpaid_fines = cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM FINES f
+                JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                WHERE bl.Card_id = ? AND f.Paid = 0
+                """,
+                (card_id,),
+            ).fetchone()[0]
+            if unpaid_fines:
+                raise ValueError("Borrower has unpaid fines")
 
         book_out = cursor.execute(
             "SELECT 1 FROM BOOK_LOANS WHERE Isbn = ? AND Date_in IS NULL",

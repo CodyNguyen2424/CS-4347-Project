@@ -45,20 +45,36 @@
         </div>
     </div>
 
+    <form id="bulkCheckoutForm" method="POST" action="{{ url_for('bulk_checkout') }}" style="margin-bottom: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <button type="button" class="btn btn-primary" onclick="checkoutSelected()" id="bulkCheckoutBtn" disabled>
+                Checkout Selected Books
+            </button>
+            <span id="selectedCount" style="color: var(--text-secondary);">0 selected</span>
+        </div>
+    </form>
+
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
+                    <th width="40">Select</th>
                     <th>ISBN</th>
                     <th>Title</th>
                     <th>Authors</th>
-                    <th>Status</th>
+                    <th>Checked Out</th>
+                    <th>Borrower ID</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for book in results %}
                 <tr>
+                    <td>
+                        {% if book.Status == 'IN' %}
+                        <input type="checkbox" name="selected_books" value="{{ book.Isbn }}" class="book-checkbox">
+                        {% endif %}
+                    </td>
                     <td><code style="color: var(--text-secondary); font-size: 0.85rem;">{{ book.Isbn }}</code></td>
                     <td><strong>{{ book.Title }}</strong></td>
                     <td style="color: var(--text-secondary);">{{ book.Authors or 'Unknown' }}</td>
@@ -66,6 +82,13 @@
                         <span class="badge {{ 'badge-out' if book.Status == 'OUT' else 'badge-in' }}">
                             {{ book.Status }}
                         </span>
+                    </td>
+                    <td>
+                        {% if book.Borrower_ID %}
+                        <code style="color: var(--text-secondary); font-size: 0.85rem;">{{ book.Borrower_ID }}</code>
+                        {% else %}
+                        <span style="color: var(--text-secondary);">—</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if book.Status == 'IN' %}
@@ -137,6 +160,59 @@
             document.body.appendChild(form);
             form.submit();
         }
+    }
+
+    // Multiple selection functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.book-checkbox');
+        const bulkBtn = document.getElementById('bulkCheckoutBtn');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function updateSelection() {
+            const selected = document.querySelectorAll('.book-checkbox:checked');
+            const count = selected.length;
+            selectedCount.textContent = count + ' selected';
+            bulkBtn.disabled = count === 0;
+        }
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelection);
+        });
+    });
+
+    function checkoutSelected() {
+        const selected = document.querySelectorAll('.book-checkbox:checked');
+        if (selected.length === 0) {
+            alert('Please select at least one book to checkout.');
+            return;
+        }
+
+        const cardId = prompt("Enter Borrower Card ID to checkout selected books:");
+        if (!cardId) {
+            return;
+        }
+
+        const form = document.getElementById('bulkCheckoutForm');
+        // Clear any existing hidden inputs
+        form.querySelectorAll('input[type="hidden"]').forEach(input => input.remove());
+        
+        // Add ISBN inputs
+        selected.forEach(checkbox => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'isbns';
+            input.value = checkbox.value;
+            form.appendChild(input);
+        });
+
+        // Add card ID input
+        const cardInput = document.createElement('input');
+        cardInput.type = 'hidden';
+        cardInput.name = 'card_id';
+        cardInput.value = cardId;
+        form.appendChild(cardInput);
+
+        form.submit();
     }
 </script>
 {% endblock %}

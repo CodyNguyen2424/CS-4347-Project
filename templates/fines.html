@@ -4,10 +4,16 @@
 <div class="card">
     <div class="card-header">
         <h2>Outstanding Fines</h2>
-        <form action="{{ url_for('manage_fines') }}" method="POST" style="display:inline;">
-            <input type="hidden" name="action" value="refresh">
-            <button type="submit" class="btn btn-primary">Refresh Fines</button>
-        </form>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <form action="{{ url_for('manage_fines') }}" method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="refresh">
+                <button type="submit" class="btn btn-primary">Refresh Fines</button>
+            </form>
+            <a href="{{ url_for('manage_fines', show_paid='true' if not show_paid else 'false') }}" 
+               class="btn {{ 'btn-primary' if not show_paid else 'btn-secondary' }}">
+                {{ 'Show All Fines' if not show_paid else 'Show Unpaid Only' }}
+            </a>
+        </div>
     </div>
 
     {% if fines %}
@@ -17,7 +23,11 @@
                 <tr>
                     <th>Card ID</th>
                     <th>Borrower Name</th>
-                    <th>Total Fine Amount</th>
+                    <th>Unpaid Amount</th>
+                    {% if show_paid %}
+                    <th>Paid Amount</th>
+                    <th>Total Amount</th>
+                    {% endif %}
                     <th>Action</th>
                 </tr>
             </thead>
@@ -26,13 +36,23 @@
                 <tr>
                     <td>{{ fine.Card_id }}</td>
                     <td>{{ fine.Bname }}</td>
+                    {% if show_paid %}
+                    <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Unpaid_Fines or 0) }}</td>
+                    <td style="color: var(--text-secondary);">${{ "%.2f"|format(fine.Paid_Fines or 0) }}</td>
+                    <td style="font-weight: bold;">${{ "%.2f"|format(fine.Total_Fines) }}</td>
+                    {% else %}
                     <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Total_Fines) }}</td>
+                    {% endif %}
                     <td>
+                        {% if not show_paid or (fine.Unpaid_Fines and fine.Unpaid_Fines > 0) %}
                         <form action="{{ url_for('manage_fines') }}" method="POST">
                             <input type="hidden" name="action" value="pay">
                             <input type="hidden" name="card_id" value="{{ fine.Card_id }}">
                             <button type="submit" class="btn btn-primary">Pay Full Amount</button>
                         </form>
+                        {% else %}
+                        <span style="color: var(--text-secondary); font-size: 0.875rem;">Paid</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
