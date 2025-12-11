@@ -109,6 +109,7 @@
                         <th>Book</th>
                         <th>Due Date</th>
                         <th>Fine Amount</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -120,10 +121,19 @@
                         </td>
                         <td>{{ fine.Due_date }}</td>
                         <td style="color: var(--danger); font-weight: bold;">${{ "%.2f"|format(fine.Fine_amt) }}</td>
+                        <td>
+                            <form action="{{ url_for('pay_fine') }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="loan_id" value="{{ fine.Loan_id }}">
+                                <button type="submit" class="btn btn-success"
+                                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                    Pay
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                     <tr style="background: rgba(239, 68, 68, 0.1);">
-                        <td colspan="2" style="text-align: right;"><strong>Total:</strong></td>
+                        <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
                         <td style="color: var(--danger); font-weight: bold; font-size: 1.125rem;">${{
                             "%.2f"|format(total_fines) }}</td>
                     </tr>

@@ -247,6 +247,72 @@ def return_book():
     
     return redirect(url_for('profile'))
 
+@app.route('/profile/pay-fine', methods=['POST'])
+@login_required
+def pay_fine():
+    """Allow users to pay their own fines"""
+    loan_id = request.form.get('loan_id')
+    username = session.get('username')
+    
+    if not loan_id:
+        flash('Loan ID is required.', 'error')
+        return redirect(url_for('profile'))
+    
+    try:
+        loan_id = int(loan_id)
+        
+        with get_connection() as conn:
+            # Get user's card_id
+            user_card_id = conn.execute(
+                "SELECT Card_id FROM USERS WHERE Username = ?",
+                (username,)
+            ).fetchone()
+            
+            if not user_card_id or not user_card_id['Card_id']:
+                flash('You do not have a borrower account linked.', 'error')
+                return redirect(url_for('profile'))
+            
+            user_card_id = user_card_id['Card_id']
+            
+            # Verify this fine belongs to the current user
+            fine = conn.execute(
+                """
+                SELECT f.Loan_id, f.Fine_amt, f.Paid, bl.Card_id
+                FROM FINES f
+                JOIN BOOK_LOANS bl ON f.Loan_id = bl.Loan_id
+                WHERE f.Loan_id = ?
+                """,
+                (loan_id,)
+            ).fetchone()
+            
+            if not fine:
+                flash('Fine not found.', 'error')
+                return redirect(url_for('profile'))
+            
+            if fine['Card_id'] != user_card_id:
+                flash('You can only pay your own fines.', 'error')
+                return redirect(url_for('profile'))
+            
+            if fine['Paid'] == 1:
+                flash('This fine has already been paid.', 'error')
+                return redirect(url_for('profile'))
+            
+            # Pay the fine
+            conn.execute(
+                "UPDATE FINES SET Paid = 1 WHERE Loan_id = ?",
+                (loan_id,)
+            )
+            conn.commit()
+            
+            flash(f'Fine of ${fine["Fine_amt"]:.2f} paid successfully!', 'success')
+            
+    except ValueError:
+        flash('Invalid loan ID.', 'error')
+    except Exception as e:
+        flash(f'Error paying fine: {str(e)}', 'error')
+    
+    return redirect(url_for('profile'))
+
 @app.route('/')
 @login_required
 def index():
