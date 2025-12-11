@@ -242,8 +242,15 @@ py load_data.py
 
 ## 📄 License
 
-This project is for educational purposes as part of CS 4347.
+This project is for educational purposes as part of CS 4347. All rights reserved.
+
+## Technology Stack
+
+- Python 3.14
+- Flask 3.0.0
+- Werkzeug 3.0.0
+- SQLite 3.42.0
 
 ## 👥 Credits
 
-Developed for CS 4347 - Database Systems
+Developed for CS 4347 - Database Systems Team Hellium
