@@ -23,6 +23,22 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        
+        username = session.get('username')
+        with get_connection() as conn:
+            if not auth.is_admin(conn, username):
+                flash('Access denied. Admin privileges required.', 'error')
+                return redirect(url_for('index'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -33,6 +49,7 @@ def login():
             if auth.verify_user(conn, username, password):
                 session['logged_in'] = True
                 session['username'] = username
+                session['is_admin'] = auth.is_admin(conn, username)
                 flash('Login successful!', 'success')
                 return redirect(url_for('index'))
             else:
@@ -174,6 +191,62 @@ def link_borrower():
     
     return redirect(url_for('profile'))
 
+@app.route('/profile/return-book', methods=['POST'])
+@login_required
+def return_book():
+    """Allow users to return their own books"""
+    loan_id = request.form.get('loan_id')
+    username = session.get('username')
+    
+    if not loan_id:
+        flash('Loan ID is required.', 'error')
+        return redirect(url_for('profile'))
+    
+    try:
+        loan_id = int(loan_id)
+        
+        with get_connection() as conn:
+            # Get user's card_id
+            user_card_id = conn.execute(
+                "SELECT Card_id FROM USERS WHERE Username = ?",
+                (username,)
+            ).fetchone()
+            
+            if not user_card_id or not user_card_id['Card_id']:
+                flash('You do not have a borrower account linked.', 'error')
+                return redirect(url_for('profile'))
+            
+            user_card_id = user_card_id['Card_id']
+            
+            # Verify this loan belongs to the current user
+            loan = conn.execute(
+                "SELECT Card_id, Date_in FROM BOOK_LOANS WHERE Loan_id = ?",
+                (loan_id,)
+            ).fetchone()
+            
+            if not loan:
+                flash('Loan not found.', 'error')
+                return redirect(url_for('profile'))
+            
+            if loan['Card_id'] != user_card_id:
+                flash('You can only return your own books.', 'error')
+                return redirect(url_for('profile'))
+            
+            if loan['Date_in'] is not None:
+                flash('This book has already been returned.', 'error')
+                return redirect(url_for('profile'))
+            
+            # Return the book
+            loans.checkin(conn, loan_id)
+            flash('Book returned successfully!', 'success')
+            
+    except ValueError:
+        flash('Invalid loan ID.', 'error')
+    except Exception as e:
+        flash(f'Error returning book: {str(e)}', 'error')
+    
+    return redirect(url_for('profile'))
+
 @app.route('/')
 @login_required
 def index():
@@ -191,8 +264,17 @@ def search_books():
     results = []
     total_count = 0
     
+    # Get current user's card_id
+    username = session.get('username')
+    user_card_id = None
+    
     with get_connection() as conn:
         cursor = conn.cursor()
+        
+        # Get user's card_id if they have one linked
+        user_row = cursor.execute("SELECT Card_id FROM USERS WHERE Username = ?", (username,)).fetchone()
+        if user_row and user_row['Card_id']:
+            user_card_id = user_row['Card_id']
         
         # Build WHERE clause based on filters
         where_conditions = []
@@ -253,10 +335,11 @@ def search_books():
                          page=page,
                          total_pages=total_pages,
                          total_count=total_count,
-                         status_filter=status_filter)
+                         status_filter=status_filter,
+                         user_card_id=user_card_id)
 
 @app.route('/loans', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def view_loans():
     # Helper to checkin
     if request.method == 'POST':
@@ -296,24 +379,30 @@ def view_loans():
 @app.route('/checkout', methods=['POST'])
 @login_required
 def checkout_book():
-    isbn = request.form.get('isbn')
+    isbn_list = request.form.getlist('isbn')  # Support multiple ISBNs
     card_id = request.form.get('card_id')
     
-    if not isbn or not card_id:
-        flash("ISBN and Card ID are required.", "error")
-        return redirect(url_for('view_loans'))
+    if not isbn_list or not card_id:
+        flash("At least one ISBN and Card ID are required.", "error")
+        return redirect(request.referrer or url_for('search_books'))
 
     try:
         with get_connection() as conn:
-            loans.checkout(conn, isbn, card_id)
-        flash(f"Book {isbn} checked out to Card {card_id}.", "success")
+            for isbn in isbn_list:
+                if isbn.strip():  # Skip empty values
+                    loans.checkout(conn, isbn.strip(), card_id)
+        
+        if len(isbn_list) == 1:
+            flash(f"Book {isbn_list[0]} checked out to Card {card_id}.", "success")
+        else:
+            flash(f"{len(isbn_list)} books checked out to Card {card_id}.", "success")
     except Exception as e:
         flash(str(e), "error")
     
-    return redirect(url_for('view_loans'))
+    return redirect(request.referrer or url_for('search_books'))
 
 @app.route('/borrowers', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def manage_borrowers():
     if request.method == 'POST':
         ssn = request.form.get('ssn')
@@ -371,7 +460,7 @@ def manage_borrowers():
                          user_card_id=user_card_id)
 
 @app.route('/borrowers/delete/<int:card_id>', methods=['POST'])
-@login_required
+@admin_required
 def delete_borrower(card_id):
     try:
         username = session.get('username')
@@ -425,7 +514,7 @@ def unlink_borrower():
     return redirect(url_for('profile'))
 
 @app.route('/fines', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def manage_fines():
     # Handle fine payment or refresh
     if request.method == 'POST':

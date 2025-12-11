@@ -4,31 +4,34 @@ A modern, full-featured library management system built with Flask, featuring us
 
 ## ✨ Features
 
-### 🔐 User Authentication
+### 🔐 User Authentication & Roles
+- **Admin/User Role System**: Separate admin and regular user accounts
 - Secure login/logout with session management
 - User registration with automatic borrower account creation
 - Password hashing using Werkzeug
 - Link existing borrower accounts to user profiles
+- **Admin Badge**: Admins see a special badge on their profile
 
 ### 📖 Book Management
 - Search 25,000+ books by ISBN, title, or author
 - Pagination (50 books per page)
 - Filter by availability status (All, Available, Checked Out)
 - Real-time availability tracking
+- **Multiple Book Checkout**: Admins can select and checkout multiple books at once
 
-### 👥 Borrower Management
+### 👥 Borrower Management (Admin Only)
 - Create and manage borrower accounts
 - View all borrowers with pagination
 - Delete borrowers (with validation)
 - Automatic SSN validation
 
-### 📚 Loan Management
-- Check out books to borrowers
+### 📚 Loan Management (Admin Only)
+- Check out single or multiple books to borrowers
 - Search active loans by borrower name, card ID, or ISBN
 - Bulk check-in functionality
 - Due date tracking
 
-### 💰 Fine Management
+### 💰 Fine Management (Admin Only)
 - Automatic fine calculation for overdue books
 - View outstanding fines by borrower
 - Pay fines (with validation)
@@ -39,6 +42,7 @@ A modern, full-featured library management system built with Flask, featuring us
 - Track active loans
 - Monitor outstanding fines
 - Link/unlink borrower accounts
+- **Admin status display** with special badge
 
 ## 🚀 Quick Start
 
@@ -74,9 +78,11 @@ A modern, full-featured library management system built with Flask, featuring us
 
 3. **Access the application**
    - Open your browser to: http://127.0.0.1:5000
-   - Login with default credentials:
+   - Login with default **admin** credentials:
      - Username: `admin`
      - Password: `admin`
+   
+   **Note**: The admin account has full access to all features. Regular users created through registration will only have access to the Search page and their Profile.
 
 ### Manual Installation
 
@@ -151,22 +157,39 @@ The system uses SQLite with the following tables:
 - **BORROWER**: 1,000 borrowers with SSN, name, address, phone
 - **BOOK_LOANS**: Loan records with dates and due dates
 - **FINES**: Fine records linked to loans
-- **USERS**: User accounts with authentication
+- **USERS**: User accounts with authentication and role management (Is_admin field)
 
 ## 🔒 Security Features
 
 - Password hashing with Werkzeug
 - Session-based authentication
-- Protected routes with login_required decorator
+- Role-based access control (admin vs regular users)
+- Protected routes with login_required and admin_required decorators
 - CSRF protection via Flask sessions
 - Input validation on all forms
 
 ## 📝 Usage Guide
 
+### 👑 User Roles
+
+**Admin Users:**
+- Full access to all features
+- Can manage loans, borrowers, and fines
+- Can checkout single or multiple books
+- See admin badge (👑) on their profile
+- Navigation shows: Search, Loans, Borrowers, Fines
+
+**Regular Users:**
+- Access to Search and Profile pages only
+- Can view their own loans and fines
+- Cannot manage other borrowers or process checkouts
+- Navigation shows: Search only
+
 ### Creating a New Account
 1. Click "Create Account" on login page
 2. Fill in username, password, SSN, name, and address
 3. A borrower account is automatically created and linked
+4. **Note**: New accounts are created as regular users (not admins)
 
 ### Searching for Books
 1. Navigate to "Search" tab
@@ -174,19 +197,29 @@ The system uses SQLite with the following tables:
 3. Filter by availability status
 4. Use pagination to browse results
 
-### Checking Out Books
-1. Go to "Loans" tab
-2. Enter ISBN and Card ID
-3. Click "Checkout Book"
-4. System validates borrower, book availability, and loan limits
+### Checking Out Books (Admin Only)
 
-### Managing Borrowers
+**Single Book Checkout:**
+1. Go to "Search" tab
+2. Find an available book
+3. Click "Checkout" button
+4. Enter the borrower's Card ID
+5. System validates and processes the checkout
+
+**Multiple Book Checkout:**
+1. Go to "Search" tab
+2. Check the boxes next to available books you want to checkout
+3. Click "Checkout Selected Books" button
+4. Enter the borrower's Card ID
+5. All selected books will be checked out to that borrower
+
+### Managing Borrowers (Admin Only)
 1. Navigate to "Borrowers" tab
 2. Create new borrowers with SSN, name, address
 3. View all borrowers with pagination
 4. Delete borrowers (if no active loans)
 
-### Viewing Fines
+### Viewing Fines (Admin Only)
 1. Go to "Fines" tab
 2. Click "Refresh Fines" to calculate overdue fines
 3. View outstanding fines by borrower

@@ -45,10 +45,32 @@
         </div>
     </div>
 
+    <!-- Multi-select checkout for all users -->
+    <div
+        style="margin-bottom: 1rem; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: var(--radius); display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-success" onclick="checkoutSelected()" id="checkoutBtn" disabled>
+            Checkout Selected Books
+        </button>
+        <span id="selectedCount" style="color: var(--text-secondary); font-size: 0.875rem;">No books selected</span>
+
+        {% if user_card_id %}
+        <span style="color: var(--success); font-size: 0.875rem; margin-left: auto;">
+            ✓ Will checkout to your account (Card ID: {{ user_card_id }})
+        </span>
+        {% elif not session.get('is_admin') %}
+        <span style="color: var(--warning); font-size: 0.875rem; margin-left: auto;">
+            ⚠ You need to link a borrower account to checkout books
+        </span>
+        {% endif %}
+    </div>
+
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                    </th>
                     <th>ISBN</th>
                     <th>Title</th>
                     <th>Authors</th>
@@ -59,6 +81,12 @@
             <tbody>
                 {% for book in results %}
                 <tr>
+                    <td>
+                        {% if book.Status == 'IN' %}
+                        <input type="checkbox" class="book-checkbox" value="{{ book.Isbn }}"
+                            onchange="updateSelectedCount()">
+                        {% endif %}
+                    </td>
                     <td><code style="color: var(--text-secondary); font-size: 0.85rem;">{{ book.Isbn }}</code></td>
                     <td><strong>{{ book.Title }}</strong></td>
                     <td style="color: var(--text-secondary);">{{ book.Authors or 'Unknown' }}</td>
@@ -115,28 +143,104 @@
 </div>
 
 <script>
-    function promptCheckout(isbn) {
-        const cardId = prompt("Enter Borrower Card ID to checkout:");
-        if (cardId) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = "{{ url_for('checkout_book') }}";
+    // User's card ID from session (if linked)
+    const userCardId = {{ user_card_id| tojson }};
+    const isAdmin = {{ session.get('is_admin') | tojson }};
 
+    function promptCheckout(isbn) {
+        let cardId = userCardId;
+
+        // If user doesn't have a card linked, or is admin, prompt for Card ID
+        if (!cardId || isAdmin) {
+            cardId = prompt("Enter Borrower Card ID to checkout:");
+            if (!cardId) return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('checkout_book') }}";
+
+        const isbnInput = document.createElement('input');
+        isbnInput.type = 'hidden';
+        isbnInput.name = 'isbn';
+        isbnInput.value = isbn;
+
+        const cardInput = document.createElement('input');
+        cardInput.type = 'hidden';
+        cardInput.name = 'card_id';
+        cardInput.value = cardId;
+
+        form.appendChild(isbnInput);
+        form.appendChild(cardInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.book-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.book-checkbox:checked');
+        const count = checkboxes.length;
+        const countSpan = document.getElementById('selectedCount');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        if (count === 0) {
+            countSpan.textContent = 'No books selected';
+            checkoutBtn.disabled = true;
+        } else if (count === 1) {
+            countSpan.textContent = '1 book selected';
+            checkoutBtn.disabled = false;
+        } else {
+            countSpan.textContent = count + ' books selected';
+            checkoutBtn.disabled = false;
+        }
+    }
+
+    function checkoutSelected() {
+        const checkboxes = document.querySelectorAll('.book-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select at least one book to checkout.');
+            return;
+        }
+
+        // Check if user needs to link a borrower account
+        if (!userCardId && !isAdmin) {
+            alert('You need to link a borrower account before checking out books. Please go to your Profile page to link an account.');
+            return;
+        }
+
+        let cardId = userCardId;
+
+        // If user doesn't have a card linked, or is admin, prompt for Card ID
+        if (!cardId || isAdmin) {
+            cardId = prompt("Enter Borrower Card ID to checkout " + checkboxes.length + " book(s):");
+            if (!cardId) return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('checkout_book') }}";
+
+        checkboxes.forEach(checkbox => {
             const isbnInput = document.createElement('input');
             isbnInput.type = 'hidden';
             isbnInput.name = 'isbn';
-            isbnInput.value = isbn;
-
-            const cardInput = document.createElement('input');
-            cardInput.type = 'hidden';
-            cardInput.name = 'card_id';
-            cardInput.value = cardId;
-
+            isbnInput.value = checkbox.value;
             form.appendChild(isbnInput);
-            form.appendChild(cardInput);
-            document.body.appendChild(form);
-            form.submit();
-        }
+        });
+
+        const cardInput = document.createElement('input');
+        cardInput.type = 'hidden';
+        cardInput.name = 'card_id';
+        cardInput.value = cardId;
+
+        form.appendChild(cardInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 </script>
 {% endblock %}

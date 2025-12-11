@@ -10,7 +10,13 @@
         <div>
             <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">Account Information</h3>
             <div style="color: var(--text-secondary);">
-                <p><strong style="color: var(--text-primary);">Username:</strong> {{ user.Username }}</p>
+                <p><strong style="color: var(--text-primary);">Username:</strong> {{ user.Username }}
+                    {% if user.Is_admin %}
+                    <span class="badge badge-in"
+                        style="margin-left: 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">👑
+                        Admin</span>
+                    {% endif %}
+                </p>
                 {% if user.Card_id %}
                 {% if user.Bname %}
                 <p><strong style="color: var(--text-primary);">Borrower Card ID:</strong> {{ user.Card_id }}</p>
@@ -63,6 +69,7 @@
                         <th>Title</th>
                         <th>Checked Out</th>
                         <th>Due Date</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -72,6 +79,15 @@
                         <td><strong>{{ loan.Title }}</strong></td>
                         <td>{{ loan.Date_out }}</td>
                         <td>{{ loan.Due_date }}</td>
+                        <td>
+                            <form action="{{ url_for('return_book') }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="loan_id" value="{{ loan.Loan_id }}">
+                                <button type="submit" class="btn btn-primary"
+                                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                    Return Book
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

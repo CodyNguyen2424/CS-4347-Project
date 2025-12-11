@@ -15,9 +15,11 @@
             <a href="/" class="nav-brand">Books4U</a>
             <div class="nav-links">
                 <a href="{{ url_for('search_books') }}" class="nav-link">Search</a>
+                {% if session.get('is_admin') %}
                 <a href="{{ url_for('view_loans') }}" class="nav-link">Loans</a>
                 <a href="{{ url_for('manage_borrowers') }}" class="nav-link">Borrowers</a>
                 <a href="{{ url_for('manage_fines') }}" class="nav-link">Fines</a>
+                {% endif %}
 
                 <!-- User Dropdown -->
                 <div class="dropdown">
