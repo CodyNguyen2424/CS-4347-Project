@@ -375,7 +375,7 @@ def search_books():
             SELECT
                 b.Isbn,
                 b.Title,
-                COALESCE(GROUP_CONCAT(DISTINCT a.Name, ', '), '') AS Authors,
+                COALESCE(GROUP_CONCAT(a.Name, ', '), '') AS Authors,
                 CASE
                     WHEN EXISTS (
                         SELECT 1 FROM BOOK_LOANS bl WHERE bl.Isbn = b.Isbn AND bl.Date_in IS NULL
