@@ -413,7 +413,7 @@ def search_books():
 @app.route('/loans', methods=['GET', 'POST'])
 @admin_required
 def view_loans():
-    # Helper to checkin
+    # Helper to checkin or mark as late
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'checkin':
@@ -425,6 +425,19 @@ def view_loans():
                     with get_connection() as conn:
                         loans.checkin_multiple(conn, ids)
                     flash(f"Successfully checked in {len(loan_ids)} book(s).", "success")
+                except Exception as e:
+                    flash(str(e), "error")
+        elif action == 'mark_late':
+            loan_ids = request.form.getlist('loan_id')
+            if loan_ids:
+                try:
+                    # Convert strings to ints
+                    ids = [int(x) for x in loan_ids]
+                    with get_connection() as conn:
+                        # Calculate fines for each selected loan
+                        for loan_id in ids:
+                            fines.refresh_fines(conn, loan_id=loan_id)
+                    flash(f"Successfully calculated fines for {len(loan_ids)} loan(s).", "success")
                 except Exception as e:
                     flash(str(e), "error")
         return redirect(url_for('view_loans'))

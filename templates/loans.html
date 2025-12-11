@@ -72,8 +72,12 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top: 1rem;">
-                <button type="submit" class="btn btn-primary btn-block">Check In Selected</button>
+            <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button type="submit" name="action" value="checkin" class="btn btn-primary">Check In Selected</button>
+                <button type="submit" name="action" value="mark_late" class="btn btn-danger"
+                    style="background: var(--warning);">
+                    Mark as Late (Calculate Fines)
+                </button>
             </div>
         </form>
         {% elif search_term %}
